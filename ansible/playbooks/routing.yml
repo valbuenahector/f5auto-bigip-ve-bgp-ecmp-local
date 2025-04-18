@@ -1,0 +1,34 @@
+---
+- name: Configure BGP on F5 BIG-IP using bigip_imish_config
+  hosts: bigip
+  gather_facts: no
+  vars_files:
+    - var.yml
+
+  tasks:
+    - name: Configure BGP settings
+      f5networks.f5_modules.bigip_imish_config:
+        lines:
+          - "en"
+          - "conf t"
+          - "no service password-encryption"
+          - "router bgp 65002"
+          - "bgp graceful-restart restart-time 2"
+          - "bgp log-neighbor-changes"
+          - "redistribute kernel"
+          - "redistribute static"
+          - "neighbor 10.0.4.85 remote-as 65001"
+          - "neighbor 10.0.4.85 timers bgp 10 35"
+          - "neighbor 10.0.4.85 next-hop-self"
+          - "neighbor 10.0.4.85 soft-reconfiguration inbound"
+          - "exit"
+          - "line con 0"
+          - "login"
+          - "line vty 0 39"
+          - "login"
+          - "wr"
+        provider:
+          server: "{{ ansible_host }}"
+          user: "{{ bigip_user }}"
+          password: "{{ bigip_password }}"
+          validate_certs: false

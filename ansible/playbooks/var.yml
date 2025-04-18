@@ -1,0 +1,81 @@
+banner_text: "--------Welcome----------"
+
+ntp_servers:
+ - '129.6.15.28'
+ - '129.6.15.29'
+ 
+dns_servers:
+ - '8.8.8.8'
+
+dns_search_domains:
+- 'us-west-2.compute.internal'
+
+ip_version: 4
+
+snmp_community:
+ - name: 'SNMP_RO'
+   community: 'mysnmp'
+
+snmp_allowed:
+ - '127.0.0.1'
+
+vlan_information:
+ - name: 'external'
+   tag: '1402'
+   mtu: '9001'
+   untagged_interfaces: '1.1'
+ - name: 'internal'
+   tag: '1407'
+   mtu: '9001'
+   untagged_interfaces: '1.2'
+
+pool_information:
+ - name: 'pool1'
+ - name: 'pool2'
+
+v4_node_information:
+ - name: 'hv-us-west-2-workload-8080'
+   host: '10.0.6.150'
+   port: '8080'
+   pool: "pool1"
+   state: 'present'
+ - name: 'hv-us-west-2-workload-8080'
+   host: '10.0.6.150'
+   port: '8081'
+   pool: "pool1"
+   state: 'present'
+ - name: 'hv-us-west-2-workload-8080'
+   host: '10.0.6.150'
+   port: '8082'
+   pool: "pool2"
+   state: 'present'
+  #  state: 'absent'
+ - name: 'hv-us-west-2-workload-8080'
+   host: '10.0.6.150'
+   port: '8083'
+   pool: "pool2"
+  #  state: 'present'
+   state: 'absent'
+
+vs_information_v4:
+ - name: vip1
+   pool: pool1
+   port: 80
+   ip_protocol: tcp
+   destination: 172.16.10.100
+   snat: Automap
+   type: standard
+   profiles: http
+   route_advertisement: enabled
+   state: 'present'
+ - name: vip2
+   pool: pool2
+   port: 80
+   ip_protocol: tcp
+   destination: 172.16.10.101
+   snat: Automap
+   type: standard
+   profiles: http
+   route_advertisement: enabled
+   state: 'present'
+  #  state: 'absent'

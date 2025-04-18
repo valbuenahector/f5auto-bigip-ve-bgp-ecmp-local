@@ -1,0 +1,15 @@
+selfip_information:
+ - name: 'int_self_v4'
+   address: '10.0.6.145'
+   netmask: '255.255.255.0'
+   vlan: 'internal'
+
+ - name: 'ex_self_v4'
+   address: '10.0.4.70'
+   netmask: '255.255.255.0'
+   vlan: 'external'
+
+ - name: 'ex_self_v4_fake'
+   address: '172.16.10.1'
+   netmask: '255.255.255.0'
+   vlan: 'external'

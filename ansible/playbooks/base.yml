@@ -1,0 +1,224 @@
+---
+- name: BigIPs Initial Config
+  hosts: bigip
+  gather_facts: false
+  vars_files:
+    - var.yml
+
+  tasks:
+
+  - name: "Enable BGP in RD0"
+    bigip_routedomain:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      id: 0
+      routing_protocol: BGP
+    delegate_to: localhost
+
+  - name: "Configure NTP server on BIG-IP"
+    bigip_device_ntp:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      ntp_servers: "{{ ntp_servers }}"
+    delegate_to: localhost
+
+  # - name: "Configure BIG-IP hostname"
+  #   bigip_hostname:
+  #     provider:
+  #       server: "{{ ansible_host }}"
+  #       user: "{{ bigip_user }}"
+  #       password: "{{ bigip_password }}"
+  #       validate_certs: False
+  #     hostname: "{{ hostname }}"
+  #   delegate_to: localhost
+
+  - name: "Manage BIG-IP DNS settings"
+    bigip_device_dns:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      name_servers: "{{ dns_servers }}"
+      search: "{{ dns_search_domains }}"
+      ip_version: "{{ ip_version }}"
+    delegate_to: localhost
+
+  # - name: "Provision BIG-IP with appropriate modules"
+  #   bigip_provision:
+  #     provider:
+  #       server: "{{ ansible_host }}"
+  #       user: "{{ bigip_user }}"
+  #       password: "{{ bigip_password }}"
+  #       validate_certs: False
+  #     module: "{{ item.name }}"
+  #     level: "{{ item.level }}"
+  #   with_items: "{{ module_provisioning }}"
+  #   tags: provision
+  #   delegate_to: localhost
+
+  - name: "Configure VLANs on the BIG-IP"
+    bigip_vlan:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      name: "{{ item.name }}"
+      tag: "{{ item.tag }}"
+      mtu: "{{ item.mtu }}" 
+      untagged_interfaces: "{{ item.untagged_interfaces}}"
+    with_items: "{{ vlan_information }}"
+    delegate_to: localhost
+
+  - name: "Configure Internal SELF-IPs on the BIG-IP"
+    bigip_selfip:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      name: "int_self_v4"
+      address: "{{ internal_private_ip }}"
+      netmask: "255.255.255.0"
+      vlan: "internal"
+      allow_service:
+        - tcp:0 
+    delegate_to: localhost
+
+  - name: "Configure External SELF-IP on the BIG-IP"
+    bigip_selfip:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      name: "ex_self_v4"
+      address: "{{ external_private_ip }}"
+      netmask: "255.255.255.0"
+      vlan: "external"
+      allow_service:
+        - tcp:0 
+    delegate_to: localhost
+
+  - name: "Configure Fake External SELF-IP on the BIG-IP"
+    bigip_selfip:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      name: "ex_self_v4"
+      address: "172.16.10.1"
+      netmask: "255.255.255.0"
+      vlan: "external"
+      allow_service:
+        - tcp:0 
+    delegate_to: localhost
+
+  - name: "Configure SNMP Community"
+    bigip_snmp_community:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      name: "{{ item.name }}"
+      community: "{{ item.community }}"
+    with_items: "{{ snmp_community }}"
+    delegate_to: localhost
+
+  - name: "Configure SNMP Allowed Hosts"
+    bigip_snmp:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      allowed_addresses: "{{ snmp_allowed }}"
+    delegate_to: localhost
+
+  - name: "Create a v4 pool"
+    bigip_pool:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      name: "{{ item.name }}"
+      monitors:
+        - http
+    with_items: "{{ pool_information }}"
+    delegate_to: localhost
+
+  - name: "Create v4 nodes"
+    bigip_node:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      host: "{{ item.host }}"
+      name: "{{ item.name }}"
+      fqdn_auto_populate: no
+    with_items:
+     - "{{ v4_node_information }}"
+    delegate_to: localhost
+
+  - name: "Add nodes to pools - v4"
+    bigip_pool_member:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      reuse_nodes: 'yes'
+      pool: "{{ item.pool }}"
+      port: "{{ item.port }}"
+      name: "{{ item.name }}"
+      address: "{{ item.host }}"
+      state: 'present'
+    with_items:
+     - "{{ v4_node_information }}"
+    delegate_to: localhost
+
+  - name: "Create Main VIPs"
+    bigip_virtual_server:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      destination: "{{ item.destination }}"
+      name: "{{ item.name }}"
+      pool: "{{ item.pool }}"
+      port: "{{ item.port }}"
+      snat: "{{ item.snat }}"
+      ip_protocol: "{{ item.ip_protocol }}"
+      address_translation: true
+      port_translation: true
+      type: "{{ item.type }}"
+      state: "{{ item.state | default('present') }}"
+      profiles:
+        - http
+    with_items:
+     - "{{ vs_information_v4 }}"
+    delegate_to: localhost
+
+  - name: "Enable Route Advertisement for Primary IPv4 VIPs"
+    bigip_virtual_address:
+      provider:
+        server: "{{ ansible_host }}"
+        user: "{{ bigip_user }}"
+        password: "{{ bigip_password }}"
+        validate_certs: False
+      address: "{{ item.destination }}"
+      route_advertisement: "{{ item.route_advertisement }}"
+    with_items: "{{ vs_information_v4 }}"
+    delegate_to: localhost
